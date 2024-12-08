@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MongoDB Viewer</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px;
+            background-color: #f5f9ff;
+            color: #2c3e50;
+        }
+        .container { 
+            display: flex; 
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        .sidebar { 
+            width: 200px; 
+            margin-right: 20px;
+            padding-right: 20px;
+            border-right: 1px solid #e1e8f0;
+        }
+        .main { 
+            flex-grow: 1;
+            min-width: 0;
+        }
+        .document { 
+            border: 1px solid #e1e8f0;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 4px;
+            background-color: white;
+        }
+        .pagination { 
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+        }
+        select { 
+            margin: 5px 0;
+            padding: 8px;
+            width: 100%;
+            border: 1px solid #e1e8f0;
+            border-radius: 4px;
+            background-color: white;
+        }
+        button { 
+            padding: 8px 16px;
+            background-color: #ff7f50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: auto;
+        }
+        button:hover {
+            background-color: #ff6b3d;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        pre { 
+            white-space: pre-wrap;
+            background-color: #f8fafc;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 0;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        h3 {
+            color: #34495e;
+            margin-bottom: 10px;
+        }
+        #pageInfo {
+            color: #2c3e50;
+            font-weight: bold;
+        }
+        .pagination-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .query-container {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+        }
+        .query-input {
+            flex-grow: 1;
+            padding: 8px;
+            border: 1px solid #e1e8f0;
+            border-radius: 4px;
+            font-family: monospace;
+            min-height: 38px;
+        }
+        .query-button {
+            padding: 8px 16px;
+            background-color: #ff7f50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .error-message {
+            color: #e74c3c;
+            margin-top: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>MongoDB Viewer</h1>
+    <div class="container">
+        <div class="sidebar">
+            <h3>Databases</h3>
+            <select id="database">
+                <option value="">Select Database</option>
+                {% for db in databases %}
+                <option value="{{ db }}">{{ db }}</option>
+                {% endfor %}
+            </select>
+            
+            <h3>Collections</h3>
+            <select id="collection">
+                <option value="">Select Collection</option>
+            </select>
+        </div>
+        
+        <div class="main">
+            <div class="query-container">
+                <input type="text" 
+                       id="queryInput" 
+                       class="query-input" 
+                       placeholder='Enter query (e.g., {"userId": 120})'
+                       value="{}"
+                >
+                <button onclick="applyQuery()" class="query-button">Apply Query</button>
+            </div>
+            <div id="queryError" class="error-message">Invalid JSON query</div>
+            <div id="data"></div>
+            <div class="pagination">
+                <div id="pageInfo">Page 1 of 1</div>
+                <div class="pagination-buttons">
+                    <button onclick="prevPage()" id="prevBtn">Previous</button>
+                    <button onclick="nextPage()" id="nextBtn">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        let totalPages = 1;
+        let currentQuery = "{}";
+
+        document.getElementById('database').addEventListener('change', function() {
+            const db = this.value;
+            if (!db) return;
+            
+            fetch(`/collections/${db}`)
+                .then(response => response.json())
+                .then(collections => {
+                    const select = document.getElementById('collection');
+                    select.innerHTML = '<option value="">Select Collection</option>';
+                    collections.forEach(collection => {
+                        select.innerHTML += `<option value="${collection}">${collection}</option>`;
+                    });
+                    // Auto-select first collection
+                    if (collections.length > 0) {
+                        select.value = collections[0];
+                        loadData();
+                    }
+                });
+        });
+
+        document.getElementById('collection').addEventListener('change', loadData);
+
+        function applyQuery() {
+            const queryInput = document.getElementById('queryInput');
+            const errorDiv = document.getElementById('queryError');
+            
+            try {
+                // Test if valid JSON
+                JSON.parse(queryInput.value);
+                errorDiv.style.display = 'none';
+                currentQuery = queryInput.value;
+                currentPage = 1;  // Reset to first page
+                loadData();
+            } catch (e) {
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function loadData() {
+            const db = document.getElementById('database').value;
+            const collection = document.getElementById('collection').value;
+            if (!db || !collection) return;
+
+            fetch(`/data/${db}/${collection}?page=${currentPage}&query=${encodeURIComponent(currentQuery)}`)
+                .then(response => response.json())
+                .then(result => {
+                    totalPages = result.pages;
+                    displayData(result);
+                });
+        }
+
+        function displayData(result) {
+            const dataDiv = document.getElementById('data');
+            dataDiv.innerHTML = '';
+            
+            result.data.forEach(doc => {
+                const docDiv = document.createElement('div');
+                docDiv.className = 'document';
+                docDiv.innerHTML = `<pre>${JSON.stringify(doc, null, 2)}</pre>`;
+                dataDiv.appendChild(docDiv);
+            });
+
+            document.getElementById('pageInfo').textContent = 
+                `Page ${currentPage} of ${totalPages}`;
+            
+            document.getElementById('prevBtn').disabled = currentPage <= 1;
+            document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                loadData();
+            }
+        }
+
+        function nextPage() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                loadData();
+            }
+        }
+    </script>
+</body>
+</html>
