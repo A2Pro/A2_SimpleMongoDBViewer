@@ -1,21 +1,27 @@
 from flask import Flask, render_template, jsonify, request
 from pymongo import MongoClient
-from bson import ObjectId, json_util
+from bson import json_util
 import json
 from datetime import datetime
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 app = Flask(__name__)
 
 def get_db():
-    client = MongoClient("mongodb://a2pro:Eight63teal@192.168.0.50:27017/admin")
+    #Make a file called .env then set MONGODB_CONNECTION_STRING to your connection string.
+    client = MongoClient(os.getenv("MONGODB_CONNECTION_STRING"))
     return client
 
 def convert_to_json(obj):
     return json.loads(json_util.dumps(obj))
 
 def generate_sample_data():
+    #Fake sample data.
     return [
-        {"name": "A2Pro_64", "age": 37, "email": "a2@example.com", "created_at": datetime.now()},
+        {"name": "A2Pro_64", "age": 17, "email": "a2@example.com", "created_at": datetime.now()},
         {"name": "X3_MotoF", "age": 25, "email": "X3@example.com", "created_at": datetime.now(), "motorbike" : True}
     ]
 
@@ -67,7 +73,7 @@ def create_database():
         return jsonify({"error": "Database name is required"}), 400
     
     client = get_db()
-    # Creating a dummy collection since MongoDB doesn't allow empty databases
+    # Create a dummy collection since MongoDB doesn't allow empty databases
     db = client[database_name]
     db.create_collection('_temp')
     

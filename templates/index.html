@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>A2's MongoDB Viewer</title>
+    <!--Full disclosure - this was styled by Claude AI. I heavily modified the routes it made.-->
     <style>
         body { 
             font-family: Arial, sans-serif; 
@@ -49,13 +50,13 @@
             background-color: white;
         }
         button { 
-            padding: 8px 16px;
+            padding: 6px 12px;
             background-color: #ff7f50;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            width: auto;
+            font-size: 12px;
         }
         button:hover {
             background-color: #ff6b3d;
@@ -94,22 +95,28 @@
             color: #34495e;
             margin-bottom: 10px;
         }
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .section-header h3 {
+            margin: 0;
+        }
+        .button-group {
+            display: flex;
+            gap: 5px;
+        }
+        .select-container {
+            margin-bottom: 15px;
+        }
         .controls {
             margin: 15px 0;
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
             align-items: center;
-        }
-        .input-group {
-            margin: 10px 0;
-        }
-        .input-group input {
-            width: calc(100% - 20px);
-            padding: 8px;
-            margin-top: 5px;
-            border: 1px solid #e1e8f0;
-            border-radius: 4px;
         }
         .modal {
             display: none;
@@ -126,15 +133,22 @@
             background-color: #fff;
             margin: 15% auto;
             padding: 20px;
-            width: 50%;
+            width: 400px;
             border-radius: 8px;
-            text-align: center;
+        }
+        .modal-input {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #e1e8f0;
+            border-radius: 4px;
+            box-sizing: border-box;
         }
         .modal-buttons {
-            margin-top: 20px;
             display: flex;
-            justify-content: center;
+            justify-content: flex-end;
             gap: 10px;
+            margin-top: 20px;
         }
         .success-message {
             background-color: #2ecc71;
@@ -158,32 +172,36 @@
     <h1>A2's MongoDB Viewer</h1>
     <div class="container">
         <div class="sidebar">
-            <h3>Databases</h3>
-            <select id="database">
-                <option value="">Select Database</option>
-                {% for db in databases %}
-                <option value="{{ db }}">{{ db }}</option>
-                {% endfor %}
-            </select>
-            
-            <div class="input-group">
-                <input type="text" id="newDatabaseName" placeholder="New database name">
-                <button onclick="createDatabase()">Create Database</button>
+            <div class="section-header">
+                <h3>Databases</h3>
+                <div class="button-group">
+                    <button onclick="showCreateDbModal()">Create</button>
+                    <button onclick="showDeleteDbModal()" class="danger-button">Delete</button>
+                </div>
             </div>
             
-            <button onclick="confirmDeleteDatabase()" class="danger-button">Delete Database</button>
-            
-            <h3>Collections</h3>
-            <select id="collection">
-                <option value="">Select Collection</option>
-            </select>
-            
-            <div class="input-group">
-                <input type="text" id="newCollectionName" placeholder="New collection name">
-                <button onclick="createCollection()">Create Collection</button>
+            <div class="select-container">
+                <select id="database">
+                    <option value="">Select Database</option>
+                    {% for db in databases %}
+                    <option value="{{ db }}">{{ db }}</option>
+                    {% endfor %}
+                </select>
             </div>
             
-            <button onclick="deleteCollection()" class="danger-button">Delete Collection</button>
+            <div class="section-header">
+                <h3>Collections</h3>
+                <div class="button-group">
+                    <button onclick="showCreateCollectionModal()">Create</button>
+                    <button onclick="showDeleteCollectionModal()" class="danger-button">Delete</button>
+                </div>
+            </div>
+            
+            <div class="select-container">
+                <select id="collection">
+                    <option value="">Select Collection</option>
+                </select>
+            </div>
         </div>
         
         <div class="main">
@@ -212,13 +230,58 @@
         </div>
     </div>
 
-    <div id="deleteModal" class="modal">
+    
+    <div id="createDbModal" class="modal">
         <div class="modal-content">
-            <h3>Confirm Delete</h3>
+            <h3>Create New Database</h3>
+            <input type="text" 
+                   id="newDatabaseName" 
+                   class="modal-input" 
+                   placeholder="Enter database name"
+                   onkeyup="handleCreateDbEnter(event)">
+            <div class="modal-buttons">
+                <button onclick="closeModals()">Cancel</button>
+                <button onclick="createDatabase()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    
+    <div id="deleteDbModal" class="modal">
+        <div class="modal-content">
+            <h3>Delete Database</h3>
             <p>Are you sure you want to delete this database? This action cannot be undone.</p>
             <div class="modal-buttons">
+                <button onclick="closeModals()">Cancel</button>
                 <button onclick="deleteDatabase()" class="danger-button">Delete</button>
-                <button onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    
+    <div id="createCollectionModal" class="modal">
+        <div class="modal-content">
+            <h3>Create New Collection</h3>
+            <input type="text" 
+                   id="newCollectionName" 
+                   class="modal-input" 
+                   placeholder="Enter collection name"
+                   onkeyup="handleCreateCollectionEnter(event)">
+            <div class="modal-buttons">
+                <button onclick="closeModals()">Cancel</button>
+                <button onclick="createCollection()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    
+    <div id="deleteCollectionModal" class="modal">
+        <div class="modal-content">
+            <h3>Delete Collection</h3>
+            <p>Are you sure you want to delete this collection? This action cannot be undone.</p>
+            <div class="modal-buttons">
+                <button onclick="closeModals()">Cancel</button>
+                <button onclick="deleteCollection()" class="danger-button">Delete</button>
             </div>
         </div>
     </div>
@@ -241,6 +304,60 @@
             location.reload();
         }
 
+        // Modal handling functions
+        function showCreateDbModal() {
+            document.getElementById('createDbModal').style.display = 'block';
+            document.getElementById('newDatabaseName').focus();
+        }
+
+        function showDeleteDbModal() {
+            const database = document.getElementById('database').value;
+            if (!database) {
+                showSuccessMessage('Please select a database first');
+                return;
+            }
+            document.getElementById('deleteDbModal').style.display = 'block';
+        }
+
+        function showCreateCollectionModal() {
+            const database = document.getElementById('database').value;
+            if (!database) {
+                showSuccessMessage('Please select a database first');
+                return;
+            }
+            document.getElementById('createCollectionModal').style.display = 'block';
+            document.getElementById('newCollectionName').focus();
+        }
+
+        function showDeleteCollectionModal() {
+            const database = document.getElementById('database').value;
+            const collection = document.getElementById('collection').value;
+            if (!database || !collection) {
+                showSuccessMessage('Please select a database and collection first');
+                return;
+            }
+            document.getElementById('deleteCollectionModal').style.display = 'block';
+        }
+
+        function closeModals() {
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.style.display = 'none';
+            });
+        }
+
+        function handleCreateDbEnter(event) {
+            if (event.key === 'Enter') {
+                createDatabase();
+            }
+        }
+
+        function handleCreateCollectionEnter(event) {
+            if (event.key === 'Enter') {
+                createCollection();
+            }
+        }
+
+        // Create/Delete functions
         function createDatabase() {
             const name = document.getElementById('newDatabaseName').value;
             if (!name) return;
@@ -255,6 +372,22 @@
             .then(response => response.json())
             .then(data => {
                 showSuccessMessage(data.message);
+                closeModals();
+                refreshDatabases();
+            });
+        }
+
+        function deleteDatabase() {
+            const database = document.getElementById('database').value;
+            if (!database) return;
+
+            fetch(`/delete/database/${database}`, {
+                method: 'DELETE',
+            })
+            .then(response => response.json())
+            .then(data => {
+                showSuccessMessage(data.message);
+                closeModals();
                 refreshDatabases();
             });
         }
@@ -274,30 +407,8 @@
             .then(response => response.json())
             .then(data => {
                 showSuccessMessage(data.message);
+                closeModals();
                 loadCollections(database);
-            });
-        }
-
-        function confirmDeleteDatabase() {
-            document.getElementById('deleteModal').style.display = 'block';
-        }
-
-        function closeModal() {
-            document.getElementById('deleteModal').style.display = 'none';
-        }
-
-        function deleteDatabase() {
-            const database = document.getElementById('database').value;
-            if (!database) return;
-
-            fetch(`/delete/database/${database}`, {
-                method: 'DELETE',
-            })
-            .then(response => response.json())
-            .then(data => {
-                showSuccessMessage(data.message);
-                closeModal();
-                refreshDatabases();
             });
         }
 
@@ -306,16 +417,15 @@
             const collection = document.getElementById('collection').value;
             if (!database || !collection) return;
 
-            if (confirm('Are you sure you want to delete this collection? This action cannot be undone.')) {
-                fetch(`/delete/collection/${database}/${collection}`, {
-                    method: 'DELETE',
-                })
-                .then(response => response.json())
-                .then(data => {
-                    showSuccessMessage(data.message);
-                    loadCollections(database);
-                });
-            }
+            fetch(`/delete/collection/${database}/${collection}`, {
+                method: 'DELETE',
+            })
+            .then(response => response.json())
+            .then(data => {
+                showSuccessMessage(data.message);
+                closeModals();
+                loadCollections(database);
+            });
         }
 
         function loadSampleData() {
@@ -378,7 +488,7 @@
             if (!db || !collection) return;
 
             fetch(`/data/${db}/${collection}?page=${currentPage}&query=${encodeURIComponent(currentQuery)}`)
-                .then(response => response.json())
+            .then(response => response.json())
                 .then(result => {
                     totalPages = result.pages;
                     displayData(result);
